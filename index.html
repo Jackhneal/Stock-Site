@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger — Live Portfolio</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#171310;
+  --panel:#1f1a15;
+  --panel-2:#251f19;
+  --paper:#e9dfc8;
+  --ink:#f3ead8;
+  --ink-soft:#9a8f7a;
+  --brass:#c99a4c;
+  --brass-dim:#8a6a35;
+  --gain:#7fae86;
+  --gain-glow:rgba(127,174,134,0.25);
+  --loss:#c1573f;
+  --loss-glow:rgba(193,87,63,0.25);
+  --line:rgba(243,234,216,0.09);
+  --radius:10px;
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  background:
+    radial-gradient(circle at 15% 0%, rgba(201,154,76,0.06), transparent 45%),
+    var(--bg);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+
+.mono{ font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums; }
+
+.wrap{ max-width:1180px; margin:0 auto; padding:32px 24px 64px; }
+
+/* ---------- Header ---------- */
+.masthead{
+  display:flex; justify-content:space-between; align-items:flex-end;
+  flex-wrap:wrap; gap:16px;
+  padding-bottom:20px; margin-bottom:28px;
+  border-bottom:1px solid var(--brass-dim);
+}
+.masthead h1{
+  font-family:'Fraunces',serif; font-weight:600; font-size:30px; margin:0;
+  letter-spacing:0.2px;
+}
+.masthead .eyebrow{
+  font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:2.5px;
+  text-transform:uppercase; color:var(--brass); margin-bottom:6px;
+}
+.status-cluster{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.status-pill{
+  display:flex; align-items:center; gap:8px;
+  border:1px solid var(--line); border-radius:20px; padding:7px 14px;
+  font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:1px;
+  text-transform:uppercase; color:var(--ink-soft);
+  background:none;
+}
+button.status-pill{ cursor:pointer; }
+button.status-pill:hover{ border-color:var(--brass); color:var(--brass); }
+.status-dot{ width:7px; height:7px; border-radius:50%; background:var(--ink-soft); }
+.status-dot.live{ background:var(--gain); box-shadow:0 0 7px 2px var(--gain-glow); animation:pulse 2.4s ease-in-out infinite; }
+.status-dot.error{ background:var(--loss); box-shadow:0 0 7px 2px var(--loss-glow); }
+@keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.45; } }
+.btn{
+  font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px;
+  text-transform:uppercase; background:none; border:1px solid var(--line);
+  color:var(--ink); padding:8px 14px; border-radius:20px; cursor:pointer;
+}
+.btn:hover{ border-color:var(--brass); color:var(--brass); }
+
+/* ---------- Hero / split-flap ---------- */
+.hero{
+  display:grid; grid-template-columns:auto 1fr; gap:32px; align-items:end;
+  padding:26px 28px; margin-bottom:28px;
+  background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+}
+@media(max-width:680px){ .hero{ grid-template-columns:1fr; } }
+.hero-label{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:2px; text-transform:uppercase; color:var(--ink-soft); margin-bottom:10px; }
+.flap-row{ display:flex; align-items:flex-end; gap:2px; }
+.flap-dollar{ font-family:'Fraunces',serif; font-weight:600; font-size:30px; color:var(--brass); margin-right:4px; padding-bottom:6px; }
+.flap{
+  position:relative; width:34px; height:52px; margin-right:2px;
+  background:var(--panel-2); border:1px solid var(--line); border-radius:4px;
+  overflow:hidden; perspective:120px;
+}
+.flap.dot{ width:14px; background:none; border:none; display:flex; align-items:flex-end; justify-content:center; padding-bottom:8px; }
+.flap.dot span{ font-family:'Fraunces',serif; font-weight:600; font-size:30px; color:var(--brass); }
+.flap-digit{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-family:'Fraunces',serif; font-weight:600; font-size:28px; color:var(--ink);
+  transition:transform 0.09s linear;
+}
+.flap::after{ content:''; position:absolute; left:0; right:0; top:50%; height:1px; background:rgba(0,0,0,0.35); }
+.hero-sub{ display:flex; gap:28px; flex-wrap:wrap; }
+.hero-stat{ min-width:110px; }
+.hero-stat-label{ font-family:'IBM Plex Mono',monospace; font-size:9.5px; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink-soft); margin-bottom:5px; }
+.hero-stat-value{ font-family:'IBM Plex Mono',monospace; font-size:18px; font-weight:600; }
+.pos{ color:var(--gain); } .neg{ color:var(--loss); }
+
+/* ---------- Tabs ---------- */
+.tabs{ display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.tab{
+  font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:1px;
+  text-transform:uppercase; padding:9px 16px; border-radius:20px;
+  border:1px solid var(--line); background:none; color:var(--ink-soft); cursor:pointer;
+}
+.tab.active{ border-color:var(--brass); color:var(--brass); background:rgba(201,154,76,0.08); }
+
+/* ---------- Layout grid ---------- */
+.grid{ display:grid; grid-template-columns:1.6fr 1fr; gap:24px; align-items:start; }
+@media(max-width:900px){ .grid{ grid-template-columns:1fr; } }
+
+.panel{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px; }
+.panel-title{ font-family:'Fraunces',serif; font-size:15px; font-weight:600; margin:0 0 14px 0; }
+
+table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+th{
+  text-align:right; font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:1px;
+  text-transform:uppercase; color:var(--ink-soft); font-weight:500;
+  padding:0 6px 8px; border-bottom:1px solid var(--brass-dim);
+}
+th:first-child, td:first-child{ text-align:left; }
+td{ padding:10px 6px; text-align:right; border-bottom:1px solid var(--line); font-family:'IBM Plex Mono',monospace; }
+tr:last-child td{ border-bottom:none; }
+.ticker{ font-weight:600; color:var(--brass); font-family:'IBM Plex Mono',monospace; }
+.tname{ display:block; font-family:'Inter',sans-serif; font-size:10.5px; color:var(--ink-soft); font-weight:400; margin-top:2px; }
+.acct-badge{ display:inline-block; font-size:9px; letter-spacing:0.5px; text-transform:uppercase; color:var(--ink-soft); border:1px solid var(--line); border-radius:10px; padding:1px 7px; margin-top:3px; }
+.weight-bar{ height:4px; border-radius:2px; background:var(--line); margin-top:4px; overflow:hidden; }
+.weight-bar-fill{ height:100%; background:var(--brass); }
+
+.legend-row{ display:flex; align-items:center; gap:8px; padding:6px 0; font-size:12px; }
+.legend-dot{ width:9px; height:9px; border-radius:2px; flex-shrink:0; }
+.legend-name{ flex:1; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; font-size:11px; }
+.legend-val{ font-family:'IBM Plex Mono',monospace; font-size:11px; }
+
+.note{ font-size:11px; color:var(--ink-soft); line-height:1.6; margin-top:16px; }
+.note a{ color:var(--brass); }
+
+.error-banner{
+  display:none; background:rgba(193,87,63,0.1); border:1px solid var(--loss);
+  color:var(--loss); border-radius:8px; padding:14px 16px; font-size:12.5px;
+  margin-bottom:20px; line-height:1.6; font-family:'IBM Plex Mono',monospace;
+}
+.error-banner a{ color:var(--loss); }
+.error-banner.show{ display:block; }
+
+/* ---------- Trade ticket ---------- */
+.action-toggle{ display:flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-bottom:14px; }
+.action-toggle button{
+  flex:1; padding:10px; font-family:'IBM Plex Mono',monospace; font-size:11.5px; letter-spacing:1.5px;
+  text-transform:uppercase; background:var(--panel-2); border:none; cursor:pointer; color:var(--ink-soft);
+}
+.action-toggle button.active{ background:var(--gain); color:#132018; font-weight:600; }
+.action-toggle button.active.sell-active{ background:var(--loss); color:#2a120c; }
+.field-row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.field{ display:flex; flex-direction:column; gap:5px; flex:1; min-width:110px; }
+.field label{ font-family:'IBM Plex Mono',monospace; font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-soft); }
+.field input, .field select{
+  font-family:'IBM Plex Mono',monospace; font-size:13px; padding:9px 10px; border:1px solid var(--line);
+  border-radius:6px; background:var(--panel-2); color:var(--ink);
+}
+.field input:focus, .field select:focus{ outline:none; border-color:var(--brass); }
+.submit-btn{
+  width:100%; background:var(--brass); color:#211705; border:none; padding:12px; border-radius:6px;
+  font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:1.5px; text-transform:uppercase;
+  cursor:pointer; font-weight:600;
+}
+.submit-btn:hover{ background:#e0ac57; }
+.trade-error{ color:var(--loss); font-size:11.5px; margin-top:10px; font-family:'IBM Plex Mono',monospace; min-height:14px; }
+.reset-link{
+  display:block; margin-top:8px; background:none; border:none; color:var(--ink-soft); font-size:10.5px;
+  text-decoration:underline; cursor:pointer; padding:0; font-family:'Inter',sans-serif;
+}
+.reset-link:hover{ color:var(--brass); }
+
+/* ---------- Transaction log ---------- */
+.txlog{ max-height:260px; overflow-y:auto; }
+.tx-row{ display:flex; justify-content:space-between; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); font-size:12px; }
+.tx-row:last-child{ border-bottom:none; }
+.tx-tag{ font-family:'IBM Plex Mono',monospace; font-weight:600; width:36px; flex-shrink:0; font-size:10.5px; }
+.tx-buy{ color:var(--gain); } .tx-sell{ color:var(--loss); }
+.tx-detail{ flex:1; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace; font-size:11px; }
+.tx-amt{ font-family:'IBM Plex Mono',monospace; font-size:11.5px; white-space:nowrap; }
+
+/* ---------- Goals ---------- */
+.goal-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; }
+.goal-card{ background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:16px; }
+.goal-card.hit{ border-color:var(--gain); }
+.goal-label{ font-family:'Fraunces',serif; font-size:14px; font-weight:600; margin:0 0 2px; }
+.goal-target{ font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-soft); margin-bottom:12px; }
+.goal-bar{ height:7px; border-radius:4px; background:var(--line); overflow:hidden; margin-bottom:8px; }
+.goal-bar-fill{ height:100%; background:var(--brass); border-radius:4px; }
+.goal-card.hit .goal-bar-fill{ background:var(--gain); }
+.goal-stats{ display:flex; justify-content:space-between; align-items:baseline; font-family:'IBM Plex Mono',monospace; }
+.goal-pct{ font-size:16px; font-weight:600; color:var(--brass); }
+.goal-card.hit .goal-pct{ color:var(--gain); }
+.goal-remaining{ font-size:10.5px; color:var(--ink-soft); text-align:right; }
+.goal-deadline{ font-size:10.5px; color:var(--ink-soft); margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-family:'IBM Plex Mono',monospace; line-height:1.6; }
+
+</style>
+</head>
+<body>
+
+  <div class="wrap">
+
+    <div class="masthead">
+      <div>
+        <div class="eyebrow">Personal ledger</div>
+        <h1>Live Portfolio</h1>
+      </div>
+      <div class="status-cluster">
+        <button class="status-pill" id="syncPill" style="cursor:pointer;">
+          <span class="status-dot" id="syncDot"></span><span id="syncText">Sync off</span>
+        </button>
+        <div class="status-pill"><span class="status-dot" id="statusDot"></span><span id="statusText">Updating…</span></div>
+        <div class="status-pill mono" id="lastUpdated">Waiting for first update…</div>
+        <div class="status-pill mono">Next refresh <span id="countdown">30s</span></div>
+        <button class="btn" id="refreshBtn">Refresh now</button>
+      </div>
+    </div>
+
+    <div class="panel" id="syncPanel" style="display:none; margin-bottom:20px;">
+      <p class="panel-title">Cross-device sync</p>
+      <div id="syncSetup">
+        <p class="note" style="margin-top:0;">
+          Syncs your holdings and trade log across devices using a private GitHub Gist as storage — nothing else touches it.
+          On your first device, paste a GitHub token and leave Gist ID blank to create one. On every other device, paste the
+          <em>same token</em> plus the Gist ID it gives you.
+        </p>
+        <div class="field-row">
+          <div class="field">
+            <label>GitHub token (classic, "gist" scope)</label>
+            <input id="syncTokenInput" type="password" placeholder="ghp_...">
+          </div>
+          <div class="field">
+            <label>Gist ID (leave blank on first device)</label>
+            <input id="syncGistInput" type="text" placeholder="optional">
+          </div>
+        </div>
+        <button type="button" class="submit-btn" id="syncConnectBtn">Connect</button>
+        <div class="trade-error" id="syncError"></div>
+        <div class="note">
+          Create a token at <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">github.com/settings/tokens</a>
+          → Generate new token (classic) → check only the <strong>gist</strong> scope. Keep it private; anyone with it can read/write your gists.
+        </div>
+      </div>
+      <div id="syncConnected" style="display:none;">
+        <p class="note" style="margin-top:0;">
+          Connected. Your Gist ID — enter this plus your token on other devices to join the same sync:
+        </p>
+        <div class="field-row">
+          <div class="field">
+            <label>Gist ID</label>
+            <input id="syncGistDisplay" type="text" readonly>
+          </div>
+        </div>
+        <button type="button" class="btn" id="syncCopyBtn">Copy ID</button>
+        <button type="button" class="btn" id="syncPullBtn">Pull latest now</button>
+        <button type="button" class="reset-link" id="syncDisconnectBtn" style="display:inline;margin-left:14px;">Disconnect this device</button>
+      </div>
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--line);">
+        <p class="panel-title" style="font-size:13px;">Import starting data (one-time)</p>
+        <p class="note" style="margin-top:0;">
+          Paste a JSON blob of holdings / cash / goals here once to seed this device (and push it to sync, if connected).
+          Only needed the first time you set this up on a brand-new device with nothing in it yet.
+        </p>
+        <textarea id="importBox" rows="4" style="width:100%; font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:10px; border:1px solid var(--line); border-radius:6px; background:var(--panel-2); color:var(--ink);" placeholder='{"holdings":[...],"cash":{...},"goals":[...]}'></textarea>
+        <button type="button" class="btn" id="importBtn" style="margin-top:8px;">Import</button>
+        <div class="trade-error" id="importMsg"></div>
+      </div>
+    </div>
+
+    <div class="error-banner" id="errorBanner"></div>
+
+    <div class="hero">
+      <div>
+        <div class="hero-label">Total value</div>
+        <div class="flap-row" id="flapRow"></div>
+      </div>
+      <div class="hero-sub">
+        <div class="hero-stat">
+          <div class="hero-stat-label">Day change</div>
+          <div class="hero-stat-value" id="statDayChange">—</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-label">Unrealized G/L</div>
+          <div class="hero-stat-value" id="statGL">—</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-label">Cost basis</div>
+          <div class="hero-stat-value mono" id="statCost">—</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-label">Cash</div>
+          <div class="hero-stat-value mono" id="statCash">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:28px;">
+      <p class="panel-title">Goals</p>
+      <div class="goal-grid" id="goalGrid"></div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+
+    <div class="grid">
+      <div class="panel">
+        <p class="panel-title">Holdings</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th><th>Shares</th><th>Avg cost</th><th>Price</th>
+              <th>Day</th><th>Value</th><th>G/L</th>
+            </tr>
+          </thead>
+          <tbody id="holdingsBody"></tbody>
+        </table>
+        <div class="note">
+          Prices from Finnhub, refreshed every <span id="refreshIntervalNote"></span> while this page is open.
+          US equities are real-time on the free tier; ETFs may lag a few seconds.
+          This runs entirely in your browser — nothing is sent anywhere except the price lookups.
+        </div>
+
+        <p class="panel-title" style="margin-top:24px;">Trade log</p>
+        <div class="txlog" id="txLog"></div>
+      </div>
+
+      <div>
+        <div class="panel" style="margin-bottom:24px;">
+          <p class="panel-title">Allocation</p>
+          <canvas id="allocChart" height="200"></canvas>
+          <div id="allocLegend" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="panel">
+          <p class="panel-title">Log a trade</p>
+          <form id="tradeForm">
+            <div class="action-toggle">
+              <button type="button" class="active" id="btnBuy">Buy</button>
+              <button type="button" id="btnSell">Sell</button>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Account</label>
+                <select id="fAccount"></select>
+              </div>
+              <div class="field">
+                <label>Ticker</label>
+                <input id="fTicker" type="text" placeholder="VOO" autocomplete="off">
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Shares</label>
+                <input id="fShares" type="number" step="any" min="0" placeholder="1.5">
+              </div>
+              <div class="field">
+                <label>Price / share</label>
+                <input id="fPrice" type="number" step="any" min="0" placeholder="644.18">
+              </div>
+            </div>
+            <div class="field-row" id="nameFieldWrap">
+              <div class="field">
+                <label>Name (new position only)</label>
+                <input id="fName" type="text" placeholder="optional">
+              </div>
+            </div>
+            <button type="submit" class="submit-btn" id="submitBtn">Log buy</button>
+            <div class="trade-error" id="tradeError"></div>
+          </form>
+          <div class="note" style="margin-top:14px;">
+            Saved in this browser only — clearing site data or opening on another device won\u2019t carry it over.
+            <button class="reset-link" id="resetBtn" type="button">Clear all data</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// ============================================================
+// CONFIG — safe to make public.
+// This file intentionally ships with NO personal data. Your real
+// holdings, cash, and goals live only in your private GitHub Gist
+// (via the Sync panel) and each browser's local storage — never here.
+//
+// The Finnhub key below is a read-only, rate-limited market-data key.
+// It has no access to anything of yours and isn't sensitive the way
+// a GitHub token or account data would be.
+// ============================================================
+
+const CONFIG = {
+  // Get a free key at https://finnhub.io/register (60 calls/min, no card needed)
+  FINNHUB_API_KEY: "d8lds0pr01qtamgu96m0d8lds0pr01qtamgu96mg",
+
+  // How often to pull fresh prices, in seconds.
+  REFRESH_SECONDS: 30,
+
+  // Intentionally empty. Connect sync (top-left pill) to load your real
+  // data from your private gist, or use "Import starting data" once to
+  // seed a brand-new gist.
+  HOLDINGS: [],
+  CASH: {},
+  GOALS: []
+};
+
+</script>
+<script>
+(function () {
+  const COLORS = ['#c99a4c', '#7fae86', '#c1573f', '#8aa9c9', '#b58ad1', '#e0a458', '#9a8f7a'];
+  const LS_HOLDINGS = 'ledger:holdings';
+  const LS_CASH = 'ledger:cash';
+  const LS_TX = 'ledger:transactions';
+  const LS_GOALS = 'ledger:goals';
+  const LS_TOKEN = 'ledger:sync-token';
+  const LS_GIST = 'ledger:sync-gistid';
+  const GIST_FILENAME = 'portfolio-ledger.json';
+  const PULL_INTERVAL_MS = 45000;
+
+  const state = {
+    holdings: [],
+    cash: {},
+    transactions: [],
+    goals: [],
+    quotes: {},
+    account: 'ALL',
+    tradeAction: 'BUY',
+    lastUpdated: null,
+    countdown: CONFIG.REFRESH_SECONDS,
+    chart: null,
+    syncToken: null,
+    syncGistId: null,
+    syncStatus: 'off' // off | connected | syncing | error
+  };
+
+  const fmt = (n) => '$' + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtSigned = (n) => (n >= 0 ? '+' : '\u2212') + fmt(Math.abs(n));
+  const fmtPct = (n) => (n >= 0 ? '+' : '\u2212') + Math.abs(n).toFixed(2) + '%';
+  const today = () => new Date().toISOString().slice(0, 10);
+
+  // ---------- Local persistence ----------
+  function loadLocalState() {
+    try {
+      const h = localStorage.getItem(LS_HOLDINGS);
+      const c = localStorage.getItem(LS_CASH);
+      const t = localStorage.getItem(LS_TX);
+      const g = localStorage.getItem(LS_GOALS);
+      state.holdings = h ? JSON.parse(h) : JSON.parse(JSON.stringify(CONFIG.HOLDINGS));
+      state.cash = c ? JSON.parse(c) : JSON.parse(JSON.stringify(CONFIG.CASH || {}));
+      state.transactions = t ? JSON.parse(t) : [];
+      state.goals = g ? JSON.parse(g) : JSON.parse(JSON.stringify(CONFIG.GOALS || []));
+    } catch (e) {
+      state.holdings = JSON.parse(JSON.stringify(CONFIG.HOLDINGS));
+      state.cash = JSON.parse(JSON.stringify(CONFIG.CASH || {}));
+      state.transactions = [];
+      state.goals = JSON.parse(JSON.stringify(CONFIG.GOALS || []));
+    }
+  }
+
+  function persistLocal() {
+    try {
+      localStorage.setItem(LS_HOLDINGS, JSON.stringify(state.holdings));
+      localStorage.setItem(LS_CASH, JSON.stringify(state.cash));
+      localStorage.setItem(LS_TX, JSON.stringify(state.transactions));
+      localStorage.setItem(LS_GOALS, JSON.stringify(state.goals));
+    } catch (e) { console.error('Could not save to this browser\u2019s storage', e); }
+  }
+
+  function resetToDefaults() {
+    state.holdings = JSON.parse(JSON.stringify(CONFIG.HOLDINGS));
+    state.cash = JSON.parse(JSON.stringify(CONFIG.CASH || {}));
+    state.transactions = [];
+    state.goals = JSON.parse(JSON.stringify(CONFIG.GOALS || []));
+    persistLocal();
+    pushSync();
+    refreshAll();
+  }
+
+  // ---------- Sync (GitHub Gist) ----------
+  function loadSyncConfig() {
+    state.syncToken = localStorage.getItem(LS_TOKEN) || null;
+    state.syncGistId = localStorage.getItem(LS_GIST) || null;
+  }
+
+  function saveSyncConfig(token, gistId) {
+    localStorage.setItem(LS_TOKEN, token);
+    localStorage.setItem(LS_GIST, gistId);
+    state.syncToken = token;
+    state.syncGistId = gistId;
+  }
+
+  function clearSyncConfig() {
+    localStorage.removeItem(LS_TOKEN);
+    localStorage.removeItem(LS_GIST);
+    state.syncToken = null;
+    state.syncGistId = null;
+    state.syncStatus = 'off';
+    renderSyncPanel();
+  }
+
+  function ghHeaders() {
+    return {
+      'Authorization': 'Bearer ' + state.syncToken,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'Content-Type': 'application/json'
+    };
+  }
+
+  function gistPayload() {
+    return JSON.stringify({ holdings: state.holdings, cash: state.cash, transactions: state.transactions, goals: state.goals, savedAt: new Date().toISOString() }, null, 2);
+  }
+
+  async function createGist(token) {
+    const res = await fetch('https://api.github.com/gists', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        description: 'Personal Ledger sync data',
+        public: false,
+        files: { [GIST_FILENAME]: { content: gistPayload() } }
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' creating gist');
+    const data = await res.json();
+    return data.id;
+  }
+
+  async function fetchGist() {
+    const res = await fetch('https://api.github.com/gists/' + state.syncGistId, { headers: ghHeaders() });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' reading gist');
+    const data = await res.json();
+    const file = data.files && data.files[GIST_FILENAME];
+    if (!file) throw new Error('Sync file not found in that gist');
+    return JSON.parse(file.content);
+  }
+
+  async function pushGist() {
+    const res = await fetch('https://api.github.com/gists/' + state.syncGistId, {
+      method: 'PATCH',
+      headers: ghHeaders(),
+      body: JSON.stringify({ files: { [GIST_FILENAME]: { content: gistPayload() } } })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' saving to gist');
+  }
+
+  async function pullSync(applyToState) {
+    if (!state.syncToken || !state.syncGistId) return;
+    try {
+      const remote = await fetchGist();
+      if (applyToState) {
+        state.holdings = remote.holdings || state.holdings;
+        state.cash = remote.cash || state.cash;
+        state.transactions = remote.transactions || state.transactions;
+        state.goals = remote.goals || state.goals;
+        persistLocal();
+      }
+      state.syncStatus = 'connected';
+    } catch (err) {
+      console.error('Sync pull failed', err);
+      state.syncStatus = 'error';
+    }
+    renderSyncPanel();
+  }
+
+  async function pushSync() {
+    if (!state.syncToken || !state.syncGistId) return;
+    state.syncStatus = 'syncing';
+    renderSyncPanel();
+    try {
+      await pushGist();
+      state.syncStatus = 'connected';
+    } catch (err) {
+      console.error('Sync push failed', err);
+      state.syncStatus = 'error';
+    }
+    renderSyncPanel();
+  }
+
+  async function connectSync(token, gistIdInput) {
+    const btn = document.getElementById('syncConnectBtn');
+    const errEl = document.getElementById('syncError');
+    errEl.textContent = '';
+    btn.disabled = true;
+    btn.textContent = 'Connecting\u2026';
+    try {
+      let gistId = gistIdInput.trim();
+      if (!gistId) {
+        gistId = await createGist(token);
+      }
+      saveSyncConfig(token, gistId);
+      await pullSync(true);
+      if (state.syncStatus === 'error') {
+        throw new Error('Could not read that gist. Check the token and ID.');
+      }
+      render();
+    } catch (err) {
+      console.error(err);
+      errEl.textContent = err.message || 'Something went wrong connecting.';
+      state.syncStatus = 'off';
+    }
+    btn.disabled = false;
+    btn.textContent = 'Connect';
+    renderSyncPanel();
+  }
+
+  function uniqueTickers() { return [...new Set(state.holdings.map(h => h.ticker))]; }
+  function accounts() { return [...new Set(state.holdings.map(h => h.account))]; }
+  function visibleHoldings() { return state.account === 'ALL' ? state.holdings : state.holdings.filter(h => h.account === state.account); }
+  function visibleCash() {
+    if (state.account === 'ALL') return Object.values(state.cash || {}).reduce((a, b) => a + b, 0);
+    return (state.cash && state.cash[state.account]) || 0;
+  }
+  function price(ticker) { const q = state.quotes[ticker]; return q ? q.c : null; }
+  function prevClose(ticker) { const q = state.quotes[ticker]; return q ? q.pc : null; }
+
+  // ---------- Price fetching ----------
+  async function fetchQuote(ticker) {
+    const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${CONFIG.FINNHUB_API_KEY}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${ticker}: HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.c === undefined) throw new Error(`${ticker}: bad response`);
+    return data;
+  }
+
+  async function refreshAll() {
+    if (!CONFIG.FINNHUB_API_KEY || CONFIG.FINNHUB_API_KEY === 'YOUR_API_KEY_HERE') {
+      showError('No price API key set. Find FINNHUB_API_KEY near the top of this file and paste your free Finnhub key in.');
+      setStatus('error');
+      render();
+      return;
+    }
+    setStatus('loading');
+    const tickers = uniqueTickers();
+    try {
+      const results = await Promise.all(tickers.map(t => fetchQuote(t).then(q => [t, q])));
+      results.forEach(([t, q]) => { state.quotes[t] = q; });
+      state.lastUpdated = new Date();
+      hideError();
+      setStatus('live');
+    } catch (err) {
+      console.error(err);
+      showError('Couldn\u2019t reach Finnhub (' + err.message + '). Check your connection. Showing last known prices.');
+      setStatus('error');
+    }
+    render();
+    state.countdown = CONFIG.REFRESH_SECONDS;
+  }
+
+  function setStatus(kind) {
+    const dot = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    dot.className = 'status-dot' + (kind === 'live' ? ' live' : kind === 'error' ? ' error' : '');
+    text.textContent = kind === 'live' ? 'Live' : kind === 'error' ? 'Connection issue' : 'Updating\u2026';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorBanner');
+    el.innerHTML = '\u26A0 ' + msg + ' Get a key at <a href="https://finnhub.io/register" target="_blank" rel="noopener">finnhub.io/register</a>.';
+    el.classList.add('show');
+  }
+  function hideError() { document.getElementById('errorBanner').classList.remove('show'); }
+
+  // ---------- Math ----------
+  function rowMetrics(h) {
+    const p = price(h.ticker);
+    const pc = prevClose(h.ticker);
+    const value = p !== null ? p * h.shares : h.avgCost * h.shares;
+    const cost = h.avgCost * h.shares;
+    const gl = value - cost;
+    const dayChange = (p !== null && pc !== null) ? (p - pc) * h.shares : 0;
+    const dayChangePct = (p !== null && pc) ? ((p - pc) / pc) * 100 : 0;
+    return { price: p, value, cost, gl, glPct: cost ? (gl / cost) * 100 : 0, dayChange, dayChangePct };
+  }
+
+  function aggregate(holdings) {
+    let value = 0, cost = 0, dayChange = 0;
+    holdings.forEach(h => {
+      const m = rowMetrics(h);
+      value += m.value; cost += m.cost; dayChange += m.dayChange;
+    });
+    const prevValue = value - dayChange;
+    return { value, cost, gl: value - cost, dayChange, dayChangePct: prevValue ? (dayChange / prevValue) * 100 : 0 };
+  }
+
+  // ---------- Split-flap hero ----------
+  function renderFlapValue(totalStr) {
+    const row = document.getElementById('flapRow');
+    const chars = totalStr.split('');
+    const isFirstRender = row.children.length === 0;
+    row.innerHTML = '';
+    const dollar = document.createElement('span');
+    dollar.className = 'flap-dollar';
+    dollar.textContent = '$';
+    row.appendChild(dollar);
+    chars.forEach((ch) => {
+      if (ch === ',') return;
+      if (ch === '.') {
+        const d = document.createElement('div');
+        d.className = 'flap dot';
+        d.innerHTML = '<span>.</span>';
+        row.appendChild(d);
+        return;
+      }
+      const flap = document.createElement('div');
+      flap.className = 'flap';
+      const digit = document.createElement('div');
+      digit.className = 'flap-digit';
+      digit.textContent = ch;
+      flap.appendChild(digit);
+      row.appendChild(flap);
+      if (isFirstRender) animateFlap(digit, ch);
+    });
+  }
+
+  function animateFlap(el, finalChar) {
+    if (!/[0-9]/.test(finalChar)) return;
+    let steps = 6 + Math.floor(Math.random() * 4);
+    let i = 0;
+    const iv = setInterval(() => {
+      i++;
+      if (i >= steps) { el.textContent = finalChar; clearInterval(iv); return; }
+      el.textContent = Math.floor(Math.random() * 10);
+    }, 45);
+  }
+
+  // ---------- Render ----------
+  function renderTabs() {
+    const wrap = document.getElementById('tabs');
+    wrap.innerHTML = '';
+    const opts = ['ALL', ...accounts()];
+    opts.forEach(a => {
+      const btn = document.createElement('button');
+      btn.className = 'tab' + (state.account === a ? ' active' : '');
+      btn.textContent = a === 'ALL' ? 'All accounts' : a;
+      btn.addEventListener('click', () => { state.account = a; render(); });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function renderHero() {
+    const holdings = visibleHoldings();
+    const agg = aggregate(holdings);
+    const cash = visibleCash();
+    const total = agg.value + cash;
+    renderFlapValue(total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    document.getElementById('statDayChange').innerHTML = `<span class="${agg.dayChange >= 0 ? 'pos' : 'neg'}">${fmtSigned(agg.dayChange)} (${fmtPct(agg.dayChangePct)})</span>`;
+    document.getElementById('statGL').innerHTML = `<span class="${agg.gl >= 0 ? 'pos' : 'neg'}">${fmtSigned(agg.gl)}</span>`;
+    document.getElementById('statCash').textContent = fmt(cash);
+    document.getElementById('statCost').textContent = fmt(agg.cost);
+  }
+
+  function renderTable() {
+    const holdings = visibleHoldings();
+    const agg = aggregate(holdings);
+    const totalForWeight = agg.value + visibleCash();
+    const body = document.getElementById('holdingsBody');
+    body.innerHTML = '';
+    if (holdings.length === 0) {
+      body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--ink-soft);padding:20px;">No positions yet \u2014 log a buy below.</td></tr>';
+      return;
+    }
+    holdings.forEach(h => {
+      const m = rowMetrics(h);
+      const weight = totalForWeight ? (m.value / totalForWeight) * 100 : 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <span class="ticker">${h.ticker}</span>
+          <span class="tname">${h.name || ''}</span>
+          ${state.account === 'ALL' ? `<span class="acct-badge">${h.account}</span>` : ''}
+        </td>
+        <td>${h.shares.toLocaleString(undefined, { maximumFractionDigits: 5 })}</td>
+        <td>${fmt(h.avgCost)}</td>
+        <td>${m.price !== null ? fmt(m.price) : '\u2014'}</td>
+        <td class="${m.dayChange >= 0 ? 'pos' : 'neg'}">${state.quotes[h.ticker] ? fmtPct(m.dayChangePct) : '\u2014'}</td>
+        <td>${fmt(m.value)}<div class="weight-bar"><div class="weight-bar-fill" style="width:${Math.min(weight,100).toFixed(1)}%"></div></div></td>
+        <td class="${m.gl >= 0 ? 'pos' : 'neg'}">${fmtSigned(m.gl)}<br><span style="font-size:10px;opacity:0.75">${fmtPct(m.glPct)}</span></td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  function renderAllocation() {
+    const holdings = visibleHoldings();
+    const cash = visibleCash();
+    const byTicker = {};
+    holdings.forEach(h => { const m = rowMetrics(h); byTicker[h.ticker] = (byTicker[h.ticker] || 0) + m.value; });
+    const labels = Object.keys(byTicker);
+    const data = Object.values(byTicker);
+    if (cash > 0) { labels.push('Cash'); data.push(cash); }
+    const colors = labels.map((_, i) => COLORS[i % COLORS.length]);
+    const total = data.reduce((a, b) => a + b, 0);
+    const ctx = document.getElementById('allocChart').getContext('2d');
+    if (labels.length === 0) {
+      if (state.chart) { state.chart.destroy(); state.chart = null; }
+    } else if (state.chart) {
+      state.chart.data.labels = labels;
+      state.chart.data.datasets[0].data = data;
+      state.chart.data.datasets[0].backgroundColor = colors;
+      state.chart.update();
+    } else {
+      state.chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: colors, borderColor: '#1f1a15', borderWidth: 2 }] },
+        options: { plugins: { legend: { display: false } }, cutout: '62%' }
+      });
+    }
+    const legend = document.getElementById('allocLegend');
+    legend.innerHTML = '';
+    labels.forEach((l, i) => {
+      const pct = total ? (data[i] / total) * 100 : 0;
+      const row = document.createElement('div');
+      row.className = 'legend-row';
+      row.innerHTML = `<span class="legend-dot" style="background:${colors[i]}"></span><span class="legend-name">${l}</span><span class="legend-val">${pct.toFixed(1)}%</span>`;
+      legend.appendChild(row);
+    });
+  }
+
+  function renderTxLog() {
+    const log = document.getElementById('txLog');
+    log.innerHTML = '';
+    const txs = state.transactions.slice(0, 30);
+    if (txs.length === 0) { log.innerHTML = '<div class="note">No trades logged yet.</div>'; return; }
+    txs.forEach(t => {
+      const row = document.createElement('div');
+      row.className = 'tx-row';
+      const amt = t.shares * t.price;
+      const gainStr = (t.action === 'SELL' && typeof t.gain === 'number') ? ' (' + (t.gain >= 0 ? '+' : '\u2212') + fmt(Math.abs(t.gain)) + ')' : '';
+      row.innerHTML = `
+        <span class="tx-tag ${t.action === 'BUY' ? 'tx-buy' : 'tx-sell'}">${t.action}</span>
+        <span class="tx-detail">${t.date} \u2014 ${t.shares.toLocaleString(undefined,{maximumFractionDigits:5})} ${t.ticker} @ ${fmt(t.price)} \u00b7 ${t.account}${gainStr}</span>
+        <span class="tx-amt">${fmt(amt)}</span>
+      `;
+      log.appendChild(row);
+    });
+  }
+
+  function renderAccountOptions() {
+    const sel = document.getElementById('fAccount');
+    const current = sel.value;
+    const opts = accounts();
+    sel.innerHTML = '';
+    opts.forEach(a => { const o = document.createElement('option'); o.value = a; o.textContent = a; sel.appendChild(o); });
+    const newOpt = document.createElement('option');
+    newOpt.value = '__new__'; newOpt.textContent = '+ New account\u2026';
+    sel.appendChild(newOpt);
+    if (opts.includes(current)) sel.value = current;
+  }
+
+  function renderMeta() {
+    document.getElementById('lastUpdated').textContent = state.lastUpdated ? 'Updated ' + state.lastUpdated.toLocaleTimeString() : 'Waiting for first update\u2026';
+  }
+
+  function renderSyncPanel() {
+    const pill = document.getElementById('syncPill');
+    const pillDot = document.getElementById('syncDot');
+    const pillText = document.getElementById('syncText');
+    const connected = !!(state.syncToken && state.syncGistId);
+
+    if (state.syncStatus === 'connected') { pillDot.className = 'status-dot live'; pillText.textContent = 'Synced'; }
+    else if (state.syncStatus === 'syncing') { pillDot.className = 'status-dot'; pillText.textContent = 'Syncing\u2026'; }
+    else if (state.syncStatus === 'error') { pillDot.className = 'status-dot error'; pillText.textContent = 'Sync error'; }
+    else { pillDot.className = 'status-dot'; pillText.textContent = 'Sync off'; }
+
+    document.getElementById('syncSetup').style.display = connected ? 'none' : 'block';
+    document.getElementById('syncConnected').style.display = connected ? 'block' : 'none';
+    if (connected) {
+      document.getElementById('syncGistDisplay').value = state.syncGistId;
+    }
+  }
+
+  function totalPortfolioValue() {
+    let value = 0;
+    state.holdings.forEach(h => { value += rowMetrics(h).value; });
+    value += Object.values(state.cash || {}).reduce((a, b) => a + b, 0);
+    return value;
+  }
+
+  function renderGoals() {
+    const grid = document.getElementById('goalGrid');
+    if (!state.goals || state.goals.length === 0) {
+      grid.innerHTML = '<div class="note">No goals set yet. Paste your starting data (below, in Sync settings) to add some.</div>';
+      return;
+    }
+    const total = totalPortfolioValue();
+    grid.innerHTML = '';
+    state.goals.forEach(g => {
+      const pct = g.target ? Math.min((total / g.target) * 100, 100) : 0;
+      const hit = total >= g.target;
+      const remaining = Math.max(g.target - total, 0);
+      let deadlineHtml = '';
+      if (g.targetDate) {
+        const target = new Date(g.targetDate + 'T00:00:00');
+        const now = new Date();
+        const msLeft = target - now;
+        const daysLeft = Math.ceil(msLeft / 86400000);
+        if (hit) {
+          deadlineHtml = `<div class="goal-deadline">Reached, target date was ${target.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</div>`;
+        } else if (daysLeft > 0) {
+          const monthsLeft = daysLeft / 30.44;
+          const neededMonthly = monthsLeft > 0 ? remaining / monthsLeft : remaining;
+          deadlineHtml = `<div class="goal-deadline">${daysLeft.toLocaleString()} days left (${target.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})})<br>~${fmt(neededMonthly)}/mo needed to hit it</div>`;
+        } else {
+          deadlineHtml = `<div class="goal-deadline">Target date passed (${target.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})})</div>`;
+        }
+      }
+      const card = document.createElement('div');
+      card.className = 'goal-card' + (hit ? ' hit' : '');
+      card.innerHTML = `
+        <p class="goal-label">${g.label}</p>
+        <p class="goal-target">Target ${fmt(g.target)}</p>
+        <div class="goal-bar"><div class="goal-bar-fill" style="width:${pct.toFixed(1)}%"></div></div>
+        <div class="goal-stats">
+          <span class="goal-pct">${pct.toFixed(1)}%</span>
+          <span class="goal-remaining">${hit ? 'Goal reached' : fmt(remaining) + ' to go'}</span>
+        </div>
+        ${deadlineHtml}
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function render() {
+    renderTabs();
+    renderHero();
+    renderGoals();
+    renderTable();
+    renderAllocation();
+    renderTxLog();
+    renderAccountOptions();
+    renderMeta();
+    renderSyncPanel();
+  }
+
+  // ---------- Trade ticket ----------
+  function setTradeAction(a) {
+    state.tradeAction = a;
+    document.getElementById('btnBuy').classList.toggle('active', a === 'BUY');
+    const sellBtn = document.getElementById('btnSell');
+    sellBtn.classList.toggle('active', a === 'SELL');
+    sellBtn.classList.toggle('sell-active', a === 'SELL');
+    document.getElementById('submitBtn').textContent = a === 'BUY' ? 'Log buy' : 'Log sell';
+    document.getElementById('nameFieldWrap').style.visibility = a === 'BUY' ? 'visible' : 'hidden';
+    setTradeError('');
+  }
+  function setTradeError(msg) { document.getElementById('tradeError').textContent = msg || ''; }
+
+  function handleAccountChange() {
+    const sel = document.getElementById('fAccount');
+    if (sel.value === '__new__') {
+      const name = prompt('Name the new account (e.g. "Roth IRA", "401k"):');
+      if (name && name.trim()) {
+        const trimmed = name.trim();
+        renderAccountOptions();
+        const opt = document.createElement('option');
+        opt.value = trimmed; opt.textContent = trimmed;
+        sel.insertBefore(opt, sel.lastChild);
+        sel.value = trimmed;
+      } else {
+        sel.value = accounts()[0] || '';
+      }
+    }
+  }
+
+  function submitTrade(e) {
+    e.preventDefault();
+    setTradeError('');
+    const ticker = document.getElementById('fTicker').value.trim().toUpperCase();
+    const account = document.getElementById('fAccount').value;
+    const shares = parseFloat(document.getElementById('fShares').value);
+    const price = parseFloat(document.getElementById('fPrice').value);
+    const name = document.getElementById('fName').value.trim();
+
+    if (!ticker || !account || account === '__new__' || !shares || shares <= 0 || !price || price <= 0) {
+      setTradeError('Enter a valid ticker, account, share count, and price.');
+      return;
+    }
+
+    if (state.tradeAction === 'BUY') {
+      const cost = shares * price;
+      state.cash[account] = (state.cash[account] || 0) - cost;
+      const existing = state.holdings.find(h => h.ticker === ticker && h.account === account);
+      if (existing) {
+        const newShares = existing.shares + shares;
+        existing.avgCost = (existing.avgCost * existing.shares + price * shares) / newShares;
+        existing.shares = newShares;
+      } else {
+        state.holdings.push({ account, ticker, name: name || ticker, shares, avgCost: price });
+      }
+      state.transactions.unshift({ date: today(), action: 'BUY', ticker, account, shares, price });
+    } else {
+      const existing = state.holdings.find(h => h.ticker === ticker && h.account === account);
+      if (!existing) { setTradeError(`You don\u2019t hold any ${ticker} in ${account}.`); return; }
+      if (shares > existing.shares + 0.00001) { setTradeError(`You only hold ${existing.shares} shares of ${ticker} in ${account}.`); return; }
+      const gain = (price - existing.avgCost) * shares;
+      state.cash[account] = (state.cash[account] || 0) + shares * price;
+      existing.shares -= shares;
+      state.transactions.unshift({ date: today(), action: 'SELL', ticker, account, shares, price, gain });
+      if (existing.shares <= 0.00001) { state.holdings = state.holdings.filter(h => h !== existing); }
+    }
+
+    persistLocal();
+    pushSync();
+    if (!uniqueTickers().includes(ticker) || !state.quotes[ticker]) { refreshAll(); } else { render(); }
+    document.getElementById('tradeForm').reset();
+    setTradeAction(state.tradeAction);
+  }
+
+  function importStartingData(jsonText) {
+    const out = document.getElementById('importMsg');
+    out.textContent = '';
+    out.className = 'trade-error';
+    let data;
+    try {
+      data = JSON.parse(jsonText);
+    } catch (e) {
+      out.textContent = 'That\u2019s not valid JSON \u2014 check for a missing bracket or comma.';
+      return;
+    }
+    if (!Array.isArray(data.holdings)) {
+      out.textContent = 'Expected a "holdings" array in the pasted data.';
+      return;
+    }
+    state.holdings = data.holdings;
+    state.cash = data.cash || {};
+    state.goals = data.goals || [];
+    state.transactions = data.transactions || state.transactions;
+    persistLocal();
+    pushSync();
+    refreshAll();
+    document.getElementById('importBox').value = '';
+    out.className = 'note';
+    out.textContent = 'Imported. Prices are refreshing now.';
+  }
+
+  // ---------- Wire up ----------
+  document.getElementById('btnBuy').addEventListener('click', () => setTradeAction('BUY'));
+  document.getElementById('btnSell').addEventListener('click', () => setTradeAction('SELL'));
+  document.getElementById('fAccount').addEventListener('change', handleAccountChange);
+  document.getElementById('tradeForm').addEventListener('submit', submitTrade);
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    if (confirm('Clear all holdings, cash, goals, and trade history on this device (and push that empty state to sync, if connected)? This can\u2019t be undone.')) resetToDefaults();
+  });
+  document.getElementById('refreshBtn').addEventListener('click', refreshAll);
+  document.getElementById('countdown').textContent = CONFIG.REFRESH_SECONDS + 's';
+  document.getElementById('refreshIntervalNote').textContent = CONFIG.REFRESH_SECONDS + 's';
+
+  document.getElementById('syncPill').addEventListener('click', () => {
+    const panel = document.getElementById('syncPanel');
+    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+  });
+  document.getElementById('syncConnectBtn').addEventListener('click', () => {
+    const token = document.getElementById('syncTokenInput').value.trim();
+    const gistId = document.getElementById('syncGistInput').value.trim();
+    if (!token) { document.getElementById('syncError').textContent = 'Paste your GitHub token first.'; return; }
+    connectSync(token, gistId);
+  });
+  document.getElementById('syncDisconnectBtn').addEventListener('click', () => {
+    if (confirm('Disconnect sync on this device? Your local data stays, but it will stop pulling and pushing updates.')) clearSyncConfig();
+  });
+  document.getElementById('syncPullBtn').addEventListener('click', async () => {
+    await pullSync(true);
+    render();
+  });
+  document.getElementById('syncCopyBtn').addEventListener('click', () => {
+    navigator.clipboard.writeText(state.syncGistId).then(() => {
+      const b = document.getElementById('syncCopyBtn');
+      const orig = b.textContent; b.textContent = 'Copied'; setTimeout(() => b.textContent = orig, 1200);
+    });
+  });
+  document.getElementById('importBtn').addEventListener('click', () => {
+    importStartingData(document.getElementById('importBox').value);
+  });
+
+  function tick() {
+    state.countdown -= 1;
+    document.getElementById('countdown').textContent = Math.max(state.countdown, 0) + 's';
+    if (state.countdown <= 0) refreshAll();
+  }
+
+  async function init() {
+    loadLocalState();
+    loadSyncConfig();
+    setTradeAction('BUY');
+    if (state.syncToken && state.syncGistId) {
+      state.syncStatus = 'syncing';
+      renderSyncPanel();
+      await pullSync(true);
+    }
+    refreshAll();
+    setInterval(tick, 1000);
+    if (state.syncToken && state.syncGistId) {
+      setInterval(() => pullSync(true).then(render), PULL_INTERVAL_MS);
+    }
+  }
+
+  init();
+})();
+
+</script>
+</body>
+</html>
